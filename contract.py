@@ -25,6 +25,11 @@ def Main(operation, args):
         addr = args[0]
         contractHash = args[1]
         return unapproveContract(addr, contractHash)
+    elif operation == 'isApproved':
+        Require(len(args) == 2)
+        addr = args[0]
+        contractHash = args[1]
+        return isApproved(addr, contractHash)
     return False
 
 
