@@ -1,88 +1,77 @@
 from ontology.interop.System.ExecutionEngine import GetCallingScriptHash, GetEntryScriptHash
 from ontology.interop.System.Runtime import CheckWitness
 from ontology.interop.System.Storage import GetContext, Get, Put, Delete
+from ontology.interop.Ontology.Runtime import Base58ToAddress
 
 ctx = GetContext()
 
 APPROVAL_PREFIX = 'APPROVAL-PREFIX-KEY'
+OWNER = Base58ToAddress('<BASE-58-ADDRESS')
 
 def Main(operation, args):
     if operation == 'notProtectedFromCCA':
-        Require(len(args) == 1)
-        addr = args[0]
-        return notProtectedFromCCA(addr)
+        Require(len(args) == 0)
+        return notProtectedFromCCA()
     elif operation == 'protectedFromCCA':
-        Require(len(args) == 1)
-        addr = args[0]
-        return protectedFromCCA(addr)
+        Require(len(args) == 0)
+        return protectedFromCCA()
     elif operation == 'approveContract':
-        Require(len(args) == 2)
-        addr = args[0]
-        contractHash = args[1]
-        return approveContract(addr, contractHash)
+        Require(len(args) == 1)
+        contractHash = args[0]
+        return approveContract(contractHash)
     elif operation == 'unapproveContract':
-        Require(len(args) == 2)
-        addr = args[0]
-        contractHash = args[1]
-        return unapproveContract(addr, contractHash)
+        Require(len(args) == 1)
+        contractHash = args[0]
+        return unapproveContract(contractHash)
     elif operation == 'isApproved':
-        Require(len(args) == 2)
-        addr = args[0]
-        contractHash = args[1]
-        return isApproved(addr, contractHash)
+        Require(len(args) == 1)
+        contractHash = args[0]
+        return isApproved(contractHash)
     return False
 
 
-def notProtectedFromCCA(addr):
-    RequireWitness(addr)
+def notProtectedFromCCA():
     return True
 
 
-def protectedFromCCA(addr):
-    RequireWitness(addr)
-    RequireApproved(addr)
+def protectedFromCCA():
+    RequireApproved()
     return True
 
 
-def approveContract(addr, contractHash):
-    RequireWallet(addr)
-    RequireWitness(addr)
+def approveContract(contractHash):
+    RequireOwner()
     RequireNotContract()
-    key = getApprovalKey(addr, contractHash)
+    key = getApprovalKey(contractHash)
     Put(ctx, key, True)
 
 
-def unapproveContract(addr, contractHash):
-    RequireWallet(addr)
-    RequireWitness(addr)
+def unapproveContract(contractHash):
+    RequireOwner()
     RequireNotContract()
-    key = getApprovalKey(addr, contractHash)
+    key = getApprovalKey(contractHash)
     Delete(ctx, key)
 
 
-def RequireApproved(addr):
+def RequireApproved():
     callerHash = GetCallingScriptHash()
     entryHash = GetEntryScriptHash()
     if entryHash is not callerHash:
-        approved = isApproved(addr, callerHash)
+        approved = isApproved(callerHash)
         Require(approved)
 
-def isApproved(addr, contractHash):
-    RequireWallet(addr)
-    key = getApprovalKey(addr, contractHash)
+
+def isApproved(contractHash):
+    key = getApprovalKey(contractHash)
     return Get(ctx, key)
 
 
-def getApprovalKey(addr, contractHash):
-    return concat(concat(APPROVAL_PREFIX, addr), contractHash)
+def getApprovalKey(contractHash):
+    return concat(APPROVAL_PREFIX, contractHash)
 
 
-def RequireWitness(addr):
-    Require(CheckWitness(addr))
-
-
-def RequireWallet(addr):
-    Require(len(addr) == 20)
+def RequireOwner():
+    Require(CheckWitness(OWNER))
 
 
 def RequireNotContract():
